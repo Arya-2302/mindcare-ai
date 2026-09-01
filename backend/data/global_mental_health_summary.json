@@ -1,0 +1,115 @@
+{
+  "global_average_depression_pct": 4.29,
+  "global_average_anxiety_pct": 4.73,
+  "global_average_total_burden_pct": 10.25,
+  "countries": {
+    "Afghanistan": {
+      "code": "AFG",
+      "latest_year": 2019,
+      "depression_share_pct": 4.95,
+      "anxiety_share_pct": 4.85,
+      "bipolar_share_pct": 0.7,
+      "total_burden_pct": 10.83,
+      "composite_distress_index": 79.5
+    },
+    "Australia": {
+      "code": "AUS",
+      "latest_year": 2019,
+      "depression_share_pct": 4.38,
+      "anxiety_share_pct": 5.82,
+      "bipolar_share_pct": 1.13,
+      "total_burden_pct": 12.74,
+      "composite_distress_index": 83.6
+    },
+    "Brazil": {
+      "code": "BRA",
+      "latest_year": 2019,
+      "depression_share_pct": 3.8,
+      "anxiety_share_pct": 7.41,
+      "bipolar_share_pct": 1.11,
+      "total_burden_pct": 12.83,
+      "composite_distress_index": 89.7
+    },
+    "Canada": {
+      "code": "CAN",
+      "latest_year": 2019,
+      "depression_share_pct": 3.29,
+      "anxiety_share_pct": 4.32,
+      "bipolar_share_pct": 0.81,
+      "total_burden_pct": 9.13,
+      "composite_distress_index": 62.2
+    },
+    "China": {
+      "code": "CHN",
+      "latest_year": 2019,
+      "depression_share_pct": 2.72,
+      "anxiety_share_pct": 3.16,
+      "bipolar_share_pct": 0.18,
+      "total_burden_pct": 6.49,
+      "composite_distress_index": 46.2
+    },
+    "France": {
+      "code": "FRA",
+      "latest_year": 2019,
+      "depression_share_pct": 3.84,
+      "anxiety_share_pct": 6.27,
+      "bipolar_share_pct": 0.9,
+      "total_burden_pct": 11.75,
+      "composite_distress_index": 81.0
+    },
+    "Germany": {
+      "code": "DEU",
+      "latest_year": 2019,
+      "depression_share_pct": 3.38,
+      "anxiety_share_pct": 6.21,
+      "bipolar_share_pct": 0.75,
+      "total_burden_pct": 11.02,
+      "composite_distress_index": 75.9
+    },
+    "India": {
+      "code": "IND",
+      "latest_year": 2019,
+      "depression_share_pct": 3.66,
+      "anxiety_share_pct": 2.97,
+      "bipolar_share_pct": 0.35,
+      "total_burden_pct": 7.4,
+      "composite_distress_index": 53.7
+    },
+    "Japan": {
+      "code": "JPN",
+      "latest_year": 2019,
+      "depression_share_pct": 2.1,
+      "anxiety_share_pct": 2.32,
+      "bipolar_share_pct": 0.64,
+      "total_burden_pct": 5.76,
+      "composite_distress_index": 37.4
+    },
+    "United Kingdom": {
+      "code": "GBR",
+      "latest_year": 2019,
+      "depression_share_pct": 4.1,
+      "anxiety_share_pct": 4.46,
+      "bipolar_share_pct": 1.09,
+      "total_burden_pct": 10.32,
+      "composite_distress_index": 71.5
+    },
+    "United States": {
+      "code": "USA",
+      "latest_year": 2019,
+      "depression_share_pct": 4.38,
+      "anxiety_share_pct": 5.7,
+      "bipolar_share_pct": 0.6,
+      "total_burden_pct": 11.53,
+      "composite_distress_index": 80.1
+    },
+    "World": {
+      "code": "OWID_WRL",
+      "latest_year": 2019,
+      "depression_share_pct": 3.44,
+      "anxiety_share_pct": 3.78,
+      "bipolar_share_pct": 0.49,
+      "total_burden_pct": 8.17,
+      "composite_distress_index": 58.1
+    }
+  }
+}

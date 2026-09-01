@@ -1,0 +1,81 @@
+=== DISTILBERT & EMOJI MULTIMODAL EMOTION TEST RESULTS ===
+
+[Exam Panic / Anxiety] Input: "I have an exam tomorrow and I am terrified."
+  -> Detected Emotion: Anxiety (90%)
+  -> Raw Model Label: fear
+  -> Signals: {'stress': 'High (76%)', 'anxiety': 'High (90%)', 'positivity': 'Low (15%)', 'neutrality': 'Moderate (10%)'}
+  -> Risk Level: Moderate
+
+[Friend Distance / Sadness] Input: "My friend completely ignored me today and I feel terrible."
+  -> Detected Emotion: Sadness (89%)
+  -> Raw Model Label: sadness
+  -> Signals: {'stress': 'Moderate (62%)', 'anxiety': 'Moderate (53%)', 'positivity': 'Low (10%)', 'neutrality': 'Moderate (20%)'}
+  -> Risk Level: Moderate
+
+[Internship Success / Joy] Input: "I finally got selected for my dream internship!"
+  -> Detected Emotion: Joy (95%)
+  -> Raw Model Label: joy
+  -> Signals: {'stress': 'Low (15%)', 'anxiety': 'Low (10%)', 'positivity': 'High (95%)', 'neutrality': 'Moderate (30%)'}
+  -> Risk Level: Low
+
+[Conflict / Anger] Input: "I am extremely angry at my roommate right now."
+  -> Detected Emotion: Anger (92%)
+  -> Raw Model Label: anger
+  -> Signals: {'stress': 'High (92%)', 'anxiety': 'Low (40%)', 'positivity': 'Low (10%)', 'neutrality': 'Moderate (15%)'}
+  -> Risk Level: Moderate
+
+[Informational Query] Input: "What are some ways to sleep better?"
+  -> Detected Emotion: Neutral (72%)
+  -> Raw Model Label: neutral
+  -> Signals: {'stress': 'Low (20%)', 'anxiety': 'Low (15%)', 'positivity': 'Moderate (45%)', 'neutrality': 'Moderate (35%)'}
+  -> Risk Level: Low
+
+[Emoji Happiness] Input: "I am fine 😊"
+  -> Detected Emotion: Joy (90%)
+  -> Raw Model Label: joy
+  -> Signals: {'stress': 'Low (15%)', 'anxiety': 'Low (10%)', 'positivity': 'High (90%)', 'neutrality': 'Moderate (30%)'}
+  -> Risk Level: Low
+
+[Emoji Sadness/Distress] Input: "I am fine 😭"
+  -> Detected Emotion: Sadness (95%)
+  -> Raw Model Label: sadness
+  -> Signals: {'stress': 'Moderate (66%)', 'anxiety': 'Moderate (57%)', 'positivity': 'Low (10%)', 'neutrality': 'Moderate (20%)'}
+  -> Risk Level: High
+
+[Emoticon Sadness] Input: "Feeling very lonely today :("
+  -> Detected Emotion: Sadness (88%)
+  -> Raw Model Label: sadness
+  -> Signals: {'stress': 'Moderate (61%)', 'anxiety': 'Moderate (52%)', 'positivity': 'Low (10%)', 'neutrality': 'Moderate (20%)'}
+  -> Risk Level: Moderate
+
+[Emoticon Joy] Input: "So excited about this! :D"
+  -> Detected Emotion: Joy (85%)
+  -> Raw Model Label: joy
+  -> Signals: {'stress': 'Low (15%)', 'anxiety': 'Low (10%)', 'positivity': 'High (85%)', 'neutrality': 'Moderate (30%)'}
+  -> Risk Level: Low
+
+=== CHAT CONVERSATION ENDPOINT TESTS ===
+
+[User Message]: "I have an exam tomorrow and I am terrified."
+  [Emotion Card]: Anxiety (90%)
+  [AI Reply]:
+I hear how intense that anxiety feels right now. When anxiety spikes, your nervous system is working in overdrive to protect you, but it can feel overwhelming.
+
+Let's slow things down together for just a moment. Place one hand on your chest, take a slow deep breath in, and let it out gently. What is the biggest source of pressure on your mind right now? We can break it down into small, manageable steps together.
+
+[User Message]: "I am fine 😭"
+  [Emotion Card]: Sadness (95%)
+  [AI Reply]:
+I can sense the emotional heaviness in your message (95% detected sentiment). Please know that you don't have to carry this alone. I'm right here with you, ready to listen whenever you'd like to share.
+
+[User Message]: "What are some ways to sleep better?"
+  [Emotion Card]: Neutral (72%)
+  [AI Reply]:
+Here are several evidence-based strategies to improve your sleep quality:
+
+1. **Consistent Schedule**: Go to bed and wake up at the exact same time every day, even on weekends.
+2. **Screen Curfew**: Turn off phones, laptops, and TVs 45-60 minutes before bed to allow melatonin levels to rise naturally.
+3. **Cool & Dark Environment**: Keep your bedroom cool (around 65°F / 18°C) and completely dark.
+4. **Limit Evening Stimulants**: Avoid caffeine, heavy meals, and vigorous workouts within 4 hours of bedtime.
+5. **Wind-Down Ritual**: Try 5 minutes of gentle diaphragmatic breathing or listening to a 432Hz sleep soundscape in our Wellness Center.
+
