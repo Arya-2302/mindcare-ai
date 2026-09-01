@@ -1,4 +1,4 @@
-# MindCare AI — Smart Telehealth & Mental Wellness Ecosystem 🌿
+# MindCare AI - Smart Telehealth & Mental Wellness Ecosystem 🌿
 
 **MindCare AI** is an intelligent, production-grade telehealth and mental wellness web application. It combines 24/7 AI-powered emotional support, NLP sentiment analysis, interactive mood tracking, personalized relaxation tools, and licensed counselor telehealth escalation.
 
