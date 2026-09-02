@@ -1,143 +1,153 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { api } from '../services/api';
 
-const DEFAULT_PROFILE = {
-  id: 'usr-default',
-  name: 'Arya Sharma',
-  email: 'patient@demo.com',
-  phone: '+1 (555) 234-5678',
-  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&q=80',
-  role: 'patient',
-  preferences: {
-    dataSharing: true,
-    counselorAccess: true,
-    emailNotifs: true,
-    pushNotifs: true
+export const DEFAULT_PROFILES = {
+  patient: {
+    id: 'usr-patient',
+    name: 'Arya Sharma',
+    email: 'patient@demo.com',
+    phone: '+1 (555) 234-5678',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&q=80',
+    role: 'patient',
+    preferences: {
+      dataSharing: true,
+      counselorAccess: true,
+      emailNotifs: true,
+      pushNotifs: true
+    }
+  },
+  counselor: {
+    id: 'usr-counselor',
+    name: 'Dr. Elena Vance',
+    email: 'counselor@demo.com',
+    phone: '+1 (555) 890-1234',
+    licenseId: 'PSY-89412-CA',
+    avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=256&q=80',
+    role: 'counselor',
+    specialization: 'Cognitive Behavioral Therapy (CBT), Anxiety & Stress Management',
+    preferences: {
+      dataSharing: true,
+      counselorAccess: true,
+      emailNotifs: true,
+      pushNotifs: true
+    }
+  },
+  admin: {
+    id: 'usr-admin',
+    name: 'Marcus Lee (Admin)',
+    email: 'admin@demo.com',
+    phone: '+1 (555) 456-7890',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80',
+    role: 'admin',
+    title: 'Chief Telehealth Administrator',
+    preferences: {
+      dataSharing: true,
+      counselorAccess: true,
+      emailNotifs: true,
+      pushNotifs: true
+    }
   }
 };
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const getInitialUser = () => {
+  // Load a specific role's profile from isolated localStorage
+  const loadRoleProfile = useCallback((roleName) => {
+    const roleKey = roleName === 'counsellor' ? 'counselor' : (roleName || 'patient');
+    const defaultData = DEFAULT_PROFILES[roleKey] || DEFAULT_PROFILES.patient;
     try {
-      const savedProfile = localStorage.getItem('mindcare_profile');
-      const savedUser = localStorage.getItem('mindcare_user');
-      
-      const profileData = savedProfile ? JSON.parse(savedProfile) : null;
-      const userData = savedUser ? JSON.parse(savedUser) : null;
-      
-      if (profileData || userData) {
-        return {
-          id: userData?.id || profileData?.id || DEFAULT_PROFILE.id,
-          name: profileData?.name || userData?.name || DEFAULT_PROFILE.name,
-          email: profileData?.email || userData?.email || DEFAULT_PROFILE.email,
-          phone: profileData?.phone || userData?.phone || DEFAULT_PROFILE.phone,
-          avatar: profileData?.avatar || userData?.avatar || DEFAULT_PROFILE.avatar,
-          role: userData?.role || DEFAULT_PROFILE.role,
-          preferences: profileData?.preferences || userData?.preferences || DEFAULT_PROFILE.preferences
-        };
+      const saved = localStorage.getItem(`mindcare_${roleKey}_profile`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...defaultData, ...parsed, role: roleKey };
       }
-      return DEFAULT_PROFILE;
-    } catch (e) {
-      console.warn('Error reading stored user profile:', e);
-      return DEFAULT_PROFILE;
+    } catch (err) {
+      console.warn(`Failed reading profile for ${roleKey}:`, err);
     }
-  };
+    return { ...defaultData };
+  }, []);
 
-  const [user, setUser] = useState(getInitialUser);
+  // Determine initial role from localStorage
+  const [activeRole, setActiveRole] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mindcare_active_role');
+      if (saved && ['patient', 'counselor', 'admin'].includes(saved)) return saved;
+    } catch (e) { /* ignore */ }
+    return 'patient';
+  });
+
+  const [user, setUser] = useState(() => loadRoleProfile(activeRole));
   const [token, setToken] = useState(() => localStorage.getItem('mindcare_token'));
-  const [activeRole, setActiveRole] = useState(user ? user.role : 'patient');
 
-  useEffect(() => {
-    if (user) {
-      try {
-        localStorage.setItem('mindcare_user', JSON.stringify(user));
-        localStorage.setItem('mindcare_profile', JSON.stringify({
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          avatar: user.avatar,
-          preferences: user.preferences
-        }));
-      } catch (e) {
-        console.warn('Failed to sync user to localStorage:', e);
+  // Switch to another role — loads that role's isolated profile
+  const switchRole = useCallback((newRole) => {
+    const roleKey = newRole === 'counsellor' ? 'counselor' : (newRole || 'patient');
+    setActiveRole(roleKey);
+    localStorage.setItem('mindcare_active_role', roleKey);
+    const profile = loadRoleProfile(roleKey);
+    setUser(profile);
+    return profile;
+  }, [loadRoleProfile]);
+
+  // Update ONLY the specified role's profile — never touches other roles
+  const updateUserProfile = useCallback((updatedData, targetRole) => {
+    const roleKey = targetRole
+      ? (targetRole === 'counsellor' ? 'counselor' : targetRole)
+      : activeRole || 'patient';
+
+    try {
+      const currentData = loadRoleProfile(roleKey);
+      const merged = { ...currentData, ...updatedData, role: roleKey };
+      localStorage.setItem(`mindcare_${roleKey}_profile`, JSON.stringify(merged));
+
+      // Only update live user state if this is the active role
+      if (roleKey === activeRole) {
+        setUser(merged);
       }
-      setActiveRole(user.role);
+      return merged;
+    } catch (err) {
+      console.warn(`Failed saving profile for ${roleKey}:`, err);
+      return null;
     }
-
-    if (token) {
-      localStorage.setItem('mindcare_token', token);
-    } else {
-      localStorage.removeItem('mindcare_token');
-    }
-  }, [user, token]);
+  }, [activeRole, loadRoleProfile]);
 
   const loginUser = async (email, password, role = 'patient') => {
-    const res = await api.login(email, password, role);
-    if (res && res.user) {
-      const savedProfile = localStorage.getItem('mindcare_profile');
-      const profileData = savedProfile ? JSON.parse(savedProfile) : null;
+    const roleKey = role === 'counsellor' ? 'counselor' : (role || 'patient');
+    const res = await api.login(email, password, roleKey);
+    switchRole(roleKey);
 
-      const mergedUser = {
-        ...res.user,
-        name: profileData?.name || res.user.name || DEFAULT_PROFILE.name,
-        email: res.user.email || profileData?.email || DEFAULT_PROFILE.email,
-        phone: profileData?.phone || DEFAULT_PROFILE.phone,
-        avatar: profileData?.avatar || DEFAULT_PROFILE.avatar,
-        preferences: profileData?.preferences || DEFAULT_PROFILE.preferences
-      };
-
-      setUser(mergedUser);
-      localStorage.setItem('mindcare_user', JSON.stringify(mergedUser));
-      if (res.access_token) setToken(res.access_token);
-      return mergedUser;
+    if (res && res.access_token) {
+      setToken(res.access_token);
+      localStorage.setItem('mindcare_token', res.access_token);
     }
-    return null;
+    return loadRoleProfile(roleKey);
   };
 
   const registerUser = async (name, email, password, role = 'patient') => {
-    const res = await api.register(name, email, password, role);
+    const roleKey = role === 'counsellor' ? 'counselor' : (role || 'patient');
+    const res = await api.register(name, email, password, roleKey);
+    if (name || email) {
+      updateUserProfile({ name: name || undefined, email: email || undefined }, roleKey);
+    }
     return res;
   };
 
-  const updateUserProfile = (updatedData) => {
-    setUser(prevUser => {
-      const newUser = {
-        ...(prevUser || DEFAULT_PROFILE),
-        ...updatedData
-      };
-      try {
-        localStorage.setItem('mindcare_user', JSON.stringify(newUser));
-        localStorage.setItem('mindcare_profile', JSON.stringify({
-          name: newUser.name,
-          email: newUser.email,
-          phone: newUser.phone,
-          avatar: newUser.avatar,
-          preferences: newUser.preferences
-        }));
-      } catch (err) {
-        console.warn('Failed to save updated profile to localStorage:', err);
-      }
-      return newUser;
-    });
-  };
-
   const logout = () => {
-    setUser(null);
     setToken(null);
-    localStorage.removeItem('mindcare_user');
     localStorage.removeItem('mindcare_token');
   };
 
   return (
     <AuthContext.Provider value={{
       user,
-      token,
       activeRole,
+      token,
+      switchRole,
+      updateUserProfile,
+      loadRoleProfile,
       loginUser,
       registerUser,
-      updateUserProfile,
       logout
     }}>
       {children}
