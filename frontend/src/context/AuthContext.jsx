@@ -42,6 +42,17 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
+  const updateUserProfile = (updatedData) => {
+    setUser(prevUser => {
+      const newUser = {
+        ...(prevUser || {}),
+        ...updatedData
+      };
+      localStorage.setItem('mindcare_user', JSON.stringify(newUser));
+      return newUser;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -56,6 +67,7 @@ export const AuthProvider = ({ children }) => {
       activeRole,
       loginUser,
       registerUser,
+      updateUserProfile,
       logout
     }}>
       {children}
