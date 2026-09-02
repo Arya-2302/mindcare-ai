@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, Bell, Shield, CheckCircle2, Save, Upload, AlertCircle, Camera } from 'lucide-react';
 
@@ -8,36 +8,34 @@ export const ProfileSettingsPage = () => {
   const { user, updateUserProfile } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('personal');
 
-  // Personal Information state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
+  // Controlled Personal Information state initialized directly from context
+  const [name, setName] = useState(() => user?.name || 'Arya Sharma');
+  const [email, setEmail] = useState(() => user?.email || 'patient@demo.com');
+  const [phone, setPhone] = useState(() => user?.phone || '+1 (555) 234-5678');
+  const [avatar, setAvatar] = useState(() => user?.avatar || DEFAULT_AVATAR);
 
   // Status & Feedback states
   const [isSaving, setIsSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const [toastMsg, setToastMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   // Privacy & Notifications state
-  const [dataSharing, setDataSharing] = useState(true);
-  const [counselorAccess, setCounselorAccess] = useState(true);
-  const [emailNotifs, setEmailNotifs] = useState(true);
-  const [pushNotifs, setPushNotifs] = useState(true);
+  const [dataSharing, setDataSharing] = useState(() => user?.preferences?.dataSharing ?? true);
+  const [counselorAccess, setCounselorAccess] = useState(() => user?.preferences?.counselorAccess ?? true);
+  const [emailNotifs, setEmailNotifs] = useState(() => user?.preferences?.emailNotifs ?? true);
+  const [pushNotifs, setPushNotifs] = useState(() => user?.preferences?.pushNotifs ?? true);
 
   // Security passwords state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  const fileInputRef = useRef(null);
-
-  // Initialize and synchronize with user context whenever user data changes
+  // Synchronize when active user changes (e.g. initial login / restore)
   useEffect(() => {
     if (user) {
-      setName(user.name || 'Arya Sharma');
-      setEmail(user.email || 'patient@demo.com');
-      setPhone(user.phone || '+1 (555) 234-5678');
-      setAvatar(user.avatar || DEFAULT_AVATAR);
+      if (user.name) setName(user.name);
+      if (user.email) setEmail(user.email);
+      if (user.phone) setPhone(user.phone);
+      if (user.avatar) setAvatar(user.avatar);
       if (user.preferences) {
         if (typeof user.preferences.dataSharing === 'boolean') setDataSharing(user.preferences.dataSharing);
         if (typeof user.preferences.counselorAccess === 'boolean') setCounselorAccess(user.preferences.counselorAccess);
@@ -45,18 +43,18 @@ export const ProfileSettingsPage = () => {
         if (typeof user.preferences.pushNotifs === 'boolean') setPushNotifs(user.preferences.pushNotifs);
       }
     }
-  }, [user]);
+  }, [user?.id]);
 
-  // Handle Photo Upload & Optimization
+  // Handle Photo Upload & Optimization via Native File Input
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setErrorMsg('');
-    setSuccessMsg('');
+    setToastMsg('');
 
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select a valid image file (JPG, PNG, or WebP).');
+      setErrorMsg('Please select a valid image file (JPG, JPEG, PNG, or WEBP).');
       return;
     }
 
@@ -64,7 +62,7 @@ export const ProfileSettingsPage = () => {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        // Optimize avatar to a high-quality 250x250 canvas representation
+        // Draw to a clean 250x250 square canvas
         const canvas = document.createElement('canvas');
         const MAX_DIM = 250;
         let width = img.width;
@@ -92,8 +90,8 @@ export const ProfileSettingsPage = () => {
 
         // Instantly persist the avatar in AuthContext and localStorage
         updateUserProfile({ avatar: optimizedDataUrl });
-        setSuccessMsg('Profile photo updated and saved successfully!');
-        setTimeout(() => setSuccessMsg(''), 4000);
+        setToastMsg('Changes saved successfully');
+        setTimeout(() => setToastMsg(''), 4500);
       };
       img.onerror = () => {
         setErrorMsg('Failed to process the selected image. Please try another image.');
@@ -101,13 +99,15 @@ export const ProfileSettingsPage = () => {
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+    // Reset file input value so selecting the same file again triggers onChange
+    e.target.value = '';
   };
 
   // Handle Personal Info Save
   const handleSavePersonalInfo = (e) => {
     e.preventDefault();
     setErrorMsg('');
-    setSuccessMsg('');
+    setToastMsg('');
 
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
@@ -115,7 +115,7 @@ export const ProfileSettingsPage = () => {
 
     // Validations
     if (!cleanName) {
-      setErrorMsg('Full name cannot be empty.');
+      setErrorMsg('Full Name cannot be empty.');
       return;
     }
 
@@ -142,23 +142,24 @@ export const ProfileSettingsPage = () => {
       });
 
       setIsSaving(false);
-      setSuccessMsg('Profile updated successfully!');
-      setTimeout(() => setSuccessMsg(''), 4000);
-    }, 250);
+      setToastMsg('Changes saved successfully');
+      setTimeout(() => setToastMsg(''), 4500);
+    }, 150);
   };
 
   // Handle Privacy / Notification Preferences Save
-  const handleSavePreferences = (type) => {
+  const handleSavePreferences = (type, updatedPrefs) => {
     setErrorMsg('');
     const prefs = {
       dataSharing,
       counselorAccess,
       emailNotifs,
-      pushNotifs
+      pushNotifs,
+      ...updatedPrefs
     };
     updateUserProfile({ preferences: prefs });
-    setSuccessMsg(`${type} updated successfully!`);
-    setTimeout(() => setSuccessMsg(''), 4000);
+    setToastMsg('Changes saved successfully');
+    setTimeout(() => setToastMsg(''), 4500);
   };
 
   // Handle Security Password Update
@@ -173,10 +174,10 @@ export const ProfileSettingsPage = () => {
       return;
     }
 
-    setSuccessMsg('Password updated successfully!');
+    setToastMsg('Changes saved successfully');
     setCurrentPassword('');
     setNewPassword('');
-    setTimeout(() => setSuccessMsg(''), 4000);
+    setTimeout(() => setToastMsg(''), 4500);
   };
 
   return (
@@ -204,7 +205,7 @@ export const ProfileSettingsPage = () => {
               onClick={() => {
                 setActiveSubTab(tab.id);
                 setErrorMsg('');
-                setSuccessMsg('');
+                setToastMsg('');
               }}
               style={{
                 display: 'flex',
@@ -225,22 +226,65 @@ export const ProfileSettingsPage = () => {
       </div>
 
       {/* Settings Form Container */}
-      <div className="card-glass" style={{ padding: '32px' }}>
-        {/* Success Banner */}
-        {successMsg && (
-          <div className="badge badge-mint animate-fade-in" style={{ padding: '12px 18px', fontSize: '0.9rem', marginBottom: '20px', width: '100%', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CheckCircle2 size={18} /> {successMsg}
+      <div className="card-glass" style={{ padding: '32px', position: 'relative' }}>
+        
+        {/* Prominent Saved Changes Toast / Bar */}
+        {toastMsg && (
+          <div 
+            className="animate-fade-in"
+            style={{
+              padding: '14px 20px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: '#EBF7F4',
+              border: '1.5px solid #8FD8C8',
+              color: '#117863',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 16px rgba(143, 216, 200, 0.25)'
+            }}
+          >
+            <CheckCircle2 size={20} color="#117863" />
+            <span>✓ {toastMsg}</span>
           </div>
         )}
 
-        {/* Error Banner */}
+        {/* Error Alert Box */}
         {errorMsg && (
-          <div className="badge badge-coral animate-fade-in" style={{ padding: '12px 18px', fontSize: '0.9rem', marginBottom: '20px', width: '100%', display: 'flex', alignItems: 'center', gap: '8px', color: '#B91C1C' }}>
-            <AlertCircle size={18} /> {errorMsg}
+          <div 
+            className="animate-fade-in" 
+            style={{
+              padding: '14px 20px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: '#FEE2E2',
+              border: '1.5px solid #F87171',
+              color: '#B91C1C',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}
+          >
+            <AlertCircle size={18} color="#B91C1C" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* PERSONAL INFORMATION TAB */}
+        {/* Hidden File Input for Avatar Selection */}
+        <input
+          id="profile-photo-upload-input"
+          type="file"
+          accept="image/png, image/jpeg, image/jpg, image/webp"
+          style={{ display: 'none' }}
+          onChange={handlePhotoSelect}
+        />
+
+        {/* TAB 1: PERSONAL INFORMATION */}
         {activeSubTab === 'personal' && (
           <form onSubmit={handleSavePersonalInfo}>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '20px' }}>Personal Information</h3>
@@ -260,9 +304,8 @@ export const ProfileSettingsPage = () => {
                     border: '3px solid #FFFFFF'
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                <label
+                  htmlFor="profile-photo-upload-input"
                   style={{
                     position: 'absolute',
                     bottom: '0',
@@ -275,42 +318,36 @@ export const ProfileSettingsPage = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                    cursor: 'pointer'
                   }}
                   title="Upload new photo"
                 >
                   <Camera size={14} />
-                </button>
+                </label>
               </div>
 
               <div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/png, image/jpeg, image/jpg, image/webp"
-                  style={{ display: 'none' }}
-                  onChange={handlePhotoSelect}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                <label
+                  htmlFor="profile-photo-upload-input"
                   className="btn btn-outline btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                 >
                   <Upload size={14} /> Change Photo
-                </button>
+                </label>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                  Supports JPG, PNG, or WebP. Saved automatically to your profile.
+                  Supports JPG, JPEG, PNG, or WEBP. Persists automatically after selection.
                 </div>
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Full Name</label>
+              <label className="form-label" htmlFor="profile-full-name-input">Full Name</label>
               <input
+                id="profile-full-name-input"
                 type="text"
                 className="form-input"
-                placeholder="e.g. Arya Sharma"
+                placeholder="e.g. Arya Mishra"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -318,8 +355,9 @@ export const ProfileSettingsPage = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label" htmlFor="profile-email-input">Email Address</label>
               <input
+                id="profile-email-input"
                 type="email"
                 className="form-input"
                 placeholder="e.g. patient@demo.com"
@@ -330,8 +368,9 @@ export const ProfileSettingsPage = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Phone Number</label>
+              <label className="form-label" htmlFor="profile-phone-input">Phone Number</label>
               <input
+                id="profile-phone-input"
                 type="tel"
                 className="form-input"
                 placeholder="e.g. +1 (555) 234-5678"
@@ -346,7 +385,7 @@ export const ProfileSettingsPage = () => {
                 type="submit"
                 disabled={isSaving}
                 className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '130px', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '140px', justifyContent: 'center' }}
               >
                 <Save size={16} /> {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
@@ -354,7 +393,7 @@ export const ProfileSettingsPage = () => {
           </form>
         )}
 
-        {/* PRIVACY TAB */}
+        {/* TAB 2: PRIVACY & CONSENT */}
         {activeSubTab === 'privacy' && (
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '12px' }}>Privacy & Data Control</h3>
@@ -372,8 +411,9 @@ export const ProfileSettingsPage = () => {
                   type="checkbox"
                   checked={dataSharing}
                   onChange={(e) => {
-                    setDataSharing(e.target.checked);
-                    handleSavePreferences('Privacy settings');
+                    const val = e.target.checked;
+                    setDataSharing(val);
+                    handleSavePreferences('Privacy settings', { dataSharing: val });
                   }}
                   style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                 />
@@ -388,8 +428,9 @@ export const ProfileSettingsPage = () => {
                   type="checkbox"
                   checked={counselorAccess}
                   onChange={(e) => {
-                    setCounselorAccess(e.target.checked);
-                    handleSavePreferences('Privacy settings');
+                    const val = e.target.checked;
+                    setCounselorAccess(val);
+                    handleSavePreferences('Privacy settings', { counselorAccess: val });
                   }}
                   style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                 />
@@ -398,7 +439,7 @@ export const ProfileSettingsPage = () => {
           </div>
         )}
 
-        {/* NOTIFICATIONS TAB */}
+        {/* TAB 3: NOTIFICATIONS */}
         {activeSubTab === 'notifications' && (
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '20px' }}>Notification Preferences</h3>
@@ -413,8 +454,9 @@ export const ProfileSettingsPage = () => {
                   type="checkbox"
                   checked={emailNotifs}
                   onChange={(e) => {
-                    setEmailNotifs(e.target.checked);
-                    handleSavePreferences('Notification preferences');
+                    const val = e.target.checked;
+                    setEmailNotifs(val);
+                    handleSavePreferences('Notification preferences', { emailNotifs: val });
                   }}
                   style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                 />
@@ -429,8 +471,9 @@ export const ProfileSettingsPage = () => {
                   type="checkbox"
                   checked={pushNotifs}
                   onChange={(e) => {
-                    setPushNotifs(e.target.checked);
-                    handleSavePreferences('Notification preferences');
+                    const val = e.target.checked;
+                    setPushNotifs(val);
+                    handleSavePreferences('Notification preferences', { pushNotifs: val });
                   }}
                   style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                 />
@@ -439,7 +482,7 @@ export const ProfileSettingsPage = () => {
           </div>
         )}
 
-        {/* SECURITY TAB */}
+        {/* TAB 4: SECURITY */}
         {activeSubTab === 'security' && (
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '20px' }}>Security Settings</h3>
