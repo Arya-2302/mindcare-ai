@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { INITIAL_CHAT_MESSAGES } from '../utils/mockData';
 import { EmotionInsightCard } from '../components/EmotionInsightCard';
+import { generateClientResponse } from '../utils/aiResponseEngine';
 import {
   Bot,
   Send,
@@ -70,18 +71,15 @@ export const AICompanionPage = ({ guideMode }) => {
           isUnavailable: false
         };
       } else {
-        // Fallback local NLP sentiment analysis if API unreachable
+        // Dynamic context-aware client engine fallback
+        const clientResult = generateClientResponse(userText, messages);
+        replyText = clientResult.response;
         insightData = {
-          primaryEmotion: 'Reflective',
-          confidence: 76,
-          signals: {
-            stress: "Low (25%)",
-            anxiety: "Low (20%)",
-            positivity: "Moderate (60%)",
-            neutrality: "Moderate (40%)"
-          },
-          riskScore: 'Low',
-          recommendation: 'Continue engaging in positive daily reflection.',
+          primaryEmotion: clientResult.detected_emotion,
+          confidence: clientResult.confidence,
+          signals: clientResult.signals,
+          riskScore: clientResult.risk_score,
+          recommendation: clientResult.recommendations,
           isUnavailable: false
         };
       }
@@ -96,17 +94,18 @@ export const AICompanionPage = ({ guideMode }) => {
 
     } catch (err) {
       console.warn('[AI Companion Notice]:', err);
+      const clientResult = generateClientResponse(userText, messages);
       setMessages(prev => [...prev, {
         id: `msg-${Date.now() + 1}`,
         sender: 'ai',
-        text: "I hear what you are saying, and taking space to express your feelings is an important step toward clarity.",
+        text: clientResult.response,
         timestamp: tsNow(),
         insight: {
-          primaryEmotion: 'Supportive',
-          confidence: 72,
-          signals: { stress: "Low (20%)", anxiety: "Low (20%)", positivity: "Moderate (60%)", neutrality: "Moderate (50%)" },
-          riskScore: 'Low',
-          recommendation: 'Continue sharing your thoughts in this supportive space.',
+          primaryEmotion: clientResult.detected_emotion,
+          confidence: clientResult.confidence,
+          signals: clientResult.signals,
+          riskScore: clientResult.risk_score,
+          recommendation: clientResult.recommendations,
           isUnavailable: false
         }
       }]);
