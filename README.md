@@ -74,7 +74,7 @@ cd frontend
 npm install
 npm run dev
 ```
-The frontend will start at: **http://localhost:5173**
+The frontend will start at: **[http://localhost:5173](https://arya-2302.github.io/mindcare-ai/)**
 
 ### 2. Install & Launch FastAPI Backend
 In a separate terminal window:
