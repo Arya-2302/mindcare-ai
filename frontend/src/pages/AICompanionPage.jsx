@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
 import { INITIAL_CHAT_MESSAGES } from '../utils/mockData';
 import { EmotionInsightCard } from '../components/EmotionInsightCard';
-import { generateClientResponse } from '../utils/aiResponseEngine';
+import { analyzeEmotionClient, generateClientResponse } from '../utils/aiResponseEngine';
+import { callOpenRouter } from '../services/openRouterClient';
 import {
   Bot,
   Send,
@@ -11,7 +11,8 @@ import {
   Mic,
   Paperclip,
   Shield,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 
 export const AICompanionPage = ({ guideMode }) => {
@@ -19,7 +20,7 @@ export const AICompanionPage = ({ guideMode }) => {
   const [messages, setMessages] = useState(INITIAL_CHAT_MESSAGES);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isTransformerActive, setIsTransformerActive] = useState(true);
+  const [aiStatus, setAiStatus] = useState('openrouter'); // 'openrouter' | 'fallback'
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -30,12 +31,33 @@ export const AICompanionPage = ({ guideMode }) => {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  const tsNow = () =>
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const buildInsightFromText = (userText) => {
+    const emotion = analyzeEmotionClient(userText);
+    return {
+      primaryEmotion: emotion.primaryEmotion,
+      confidence: emotion.confidence,
+      signals: emotion.signals,
+      riskScore: emotion.riskScore,
+      recommendation:
+        emotion.riskScore === 'High'
+          ? 'Please consider reaching out to a licensed counselor or calling 988 (crisis line).'
+          : emotion.primaryEmotion.includes('Anxiety')
+          ? 'Try a 4-7-8 breathing cycle: inhale 4s, hold 7s, exhale 8s.'
+          : emotion.primaryEmotion.includes('Sad')
+          ? 'Journaling your thoughts for 10 minutes can help externalise heavy feelings.'
+          : 'Continue taking moments for mindfulness and daily reflection.',
+      isUnavailable: false
+    };
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || isTyping) return;
 
     const userText = input.trim();
-    const tsNow = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const userMsg = {
       id: `msg-${Date.now()}`,
@@ -49,66 +71,43 @@ export const AICompanionPage = ({ guideMode }) => {
     setIsTyping(true);
 
     try {
-      // Call /api/chat/message with conversation history (DistilBERT NLP + Context-Aware Response Engine)
-      const res = await api.sendMessage(user?.id || 'usr-default', 'sess-main', userText, messages);
+      // ── PRIMARY: OpenRouter LLM ──────────────────────────────────────────
+      const llmReply = await callOpenRouter(userText, messages);
+      const insight = buildInsightFromText(userText);
 
-      let insightData = null;
-      let replyText = "";
-
-      if (res && res.response) {
-        replyText = res.response;
-        insightData = {
-          primaryEmotion: res.detected_emotion || 'Neutral',
-          confidence: typeof res.confidence === 'number' ? res.confidence : 78,
-          signals: res.signals || {
-            stress: "Low (20%)",
-            anxiety: "Low (15%)",
-            positivity: "Moderate (65%)",
-            neutrality: "Moderate (45%)"
-          },
-          riskScore: res.risk_score || 'Low',
-          recommendation: res.recommendations || 'Continue taking moments for mindfulness and daily reflection.',
-          isUnavailable: false
-        };
-      } else {
-        // Dynamic context-aware client engine fallback
-        const clientResult = generateClientResponse(userText, messages);
-        replyText = clientResult.response;
-        insightData = {
-          primaryEmotion: clientResult.detected_emotion,
-          confidence: clientResult.confidence,
-          signals: clientResult.signals,
-          riskScore: clientResult.risk_score,
-          recommendation: clientResult.recommendations,
-          isUnavailable: false
-        };
-      }
-
-      setMessages(prev => [...prev, {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'ai',
-        text: replyText,
-        timestamp: tsNow(),
-        insight: insightData
-      }]);
-
-    } catch (err) {
-      console.warn('[AI Companion Notice]:', err);
-      const clientResult = generateClientResponse(userText, messages);
-      setMessages(prev => [...prev, {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'ai',
-        text: clientResult.response,
-        timestamp: tsNow(),
-        insight: {
-          primaryEmotion: clientResult.detected_emotion,
-          confidence: clientResult.confidence,
-          signals: clientResult.signals,
-          riskScore: clientResult.risk_score,
-          recommendation: clientResult.recommendations,
-          isUnavailable: false
+      setAiStatus('openrouter');
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'ai',
+          text: llmReply,
+          timestamp: tsNow(),
+          insight
         }
-      }]);
+      ]);
+    } catch (err) {
+      // ── FALLBACK: Local keyword engine ───────────────────────────────────
+      console.warn('[OpenRouter unavailable, using local fallback]:', err.message);
+      setAiStatus('fallback');
+      const clientResult = generateClientResponse(userText, messages);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'ai',
+          text: clientResult.response,
+          timestamp: tsNow(),
+          insight: {
+            primaryEmotion: clientResult.detected_emotion,
+            confidence: clientResult.confidence,
+            signals: clientResult.signals,
+            riskScore: clientResult.risk_score,
+            recommendation: clientResult.recommendations,
+            isUnavailable: false
+          }
+        }
+      ]);
     } finally {
       setIsTyping(false);
     }
@@ -119,12 +118,23 @@ export const AICompanionPage = ({ guideMode }) => {
       {
         id: `msg-${Date.now()}`,
         sender: 'ai',
-        text: `Hi ${user?.name?.split(' ')[0] || 'Arya'}! 👋 I'm your MindCare AI companion. I'm here to listen, reflect, and support you anytime in a completely safe, private space. How are you feeling right now?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        text: `Hi ${user?.name?.split(' ')[0] || 'there'}! 👋 I'm your MindCare AI companion, powered by advanced language AI. I'm here to listen, reflect, and support you in a completely safe, private space. How are you feeling right now?`,
+        timestamp: tsNow(),
         insight: null
       }
     ]);
   };
+
+  const statusBadge =
+    aiStatus === 'openrouter' ? (
+      <span className="badge badge-mint" style={{ padding: '2px 10px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        <Zap size={11} /> Llama 3.1 AI Active
+      </span>
+    ) : (
+      <span className="badge badge-amber" style={{ padding: '2px 10px', fontSize: '0.72rem' }}>
+        ● Local Fallback Mode
+      </span>
+    );
 
   return (
     <div style={{
@@ -167,12 +177,10 @@ export const AICompanionPage = ({ guideMode }) => {
               <h2 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-heading)', margin: 0 }}>
                 MindCare AI Companion
               </h2>
-              <span className="badge badge-mint" style={{ padding: '2px 10px', fontSize: '0.72rem' }}>
-                ● DistilBERT NLP Active
-              </span>
+              {statusBadge}
             </div>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0, marginTop: '2px' }}>
-              Real-time emotion classification & context-aware empathetic dialogue
+              Real-time emotion analysis · Powered by OpenRouter + Llama 3.1
             </p>
           </div>
         </div>
@@ -186,7 +194,7 @@ export const AICompanionPage = ({ guideMode }) => {
         </button>
       </div>
 
-      {/* Main Chat Stream Container */}
+      {/* Chat Stream */}
       <div style={{
         flex: 1,
         minHeight: 0,
@@ -218,7 +226,9 @@ export const AICompanionPage = ({ guideMode }) => {
                 fontSize: '0.75rem',
                 color: 'var(--text-secondary)'
               }}>
-                <span style={{ fontWeight: 700 }}>{isUser ? (user?.name || 'You') : 'MindCare AI'}</span>
+                <span style={{ fontWeight: 700 }}>
+                  {isUser ? (user?.name || 'You') : 'MindCare AI'}
+                </span>
                 <span>•</span>
                 <span>{msg.timestamp}</span>
               </div>
@@ -228,7 +238,9 @@ export const AICompanionPage = ({ guideMode }) => {
                 borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
                 backgroundColor: isUser ? 'var(--primary-lavender)' : '#FFFFFF',
                 color: isUser ? '#FFFFFF' : 'var(--text-dark)',
-                boxShadow: isUser ? '0 4px 12px rgba(139, 124, 246, 0.25)' : 'var(--shadow-sm)',
+                boxShadow: isUser
+                  ? '0 4px 12px rgba(139, 124, 246, 0.25)'
+                  : 'var(--shadow-sm)',
                 lineHeight: 1.65,
                 fontSize: '0.95rem',
                 border: isUser ? 'none' : '1px solid var(--border-light)',
@@ -253,14 +265,14 @@ export const AICompanionPage = ({ guideMode }) => {
             fontSize: '0.85rem'
           }}>
             <Bot size={18} color="#8B7CF6" className="animate-pulse-soft" />
-            <span>Analyzing emotion signals & generating contextual response...</span>
+            <span>Thinking & generating response...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Composer Input Bar - Always Anchored at Bottom */}
+      {/* Composer Input */}
       <div style={{
         flexShrink: 0,
         background: '#FFFFFF',
